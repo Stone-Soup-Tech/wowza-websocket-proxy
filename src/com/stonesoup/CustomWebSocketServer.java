@@ -1,5 +1,6 @@
 package com.stonesoup;
 
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -19,6 +20,7 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableEntryException;
 import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
@@ -44,14 +46,12 @@ public class CustomWebSocketServer extends WebSocketServer {
 	public void initialise(IVHost vhost, HostPort hostPort) {
 		String certificateName = hostPort.getSSLConfig().getKeyStorePath();
 		String[] certificateNameBits = certificateName.split("/");
-		certificateName = certificateNameBits[certificateNameBits.length - 1].replace(".jks", "");
+		certificateName = certificateNameBits[certificateNameBits.length - 1];
 		
-		String keyPath = vhost.getHomePath() + "/conf/" + certificateName + ".jks";
+		String keyPath = vhost.getHomePath() + "/conf/" + certificateName;
 		String keyPassword = hostPort.getSSLConfig().getKeyStorePass();
 		port = hostPort.getPort();
-		
-		domainName = vhost.getProperties().getPropertyStr("serverName");
-		
+				
 		int maxPendingConnections = hostPort.getConfiguation().getAcceptorBackLog();
 		setMaxPendingConnections(maxPendingConnections);
 		setReuseAddr(true);
@@ -71,7 +71,23 @@ public class CustomWebSocketServer extends WebSocketServer {
 	        kmf.init(ks, keyPassword.toCharArray());
 	        TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
 	        tmf.init(ks);
-        
+	        
+	        // get the domain name from certificate's keystore
+	        Enumeration<String> aliases = ks.aliases();
+	        String alias = "";
+	        while (aliases.hasMoreElements()) {
+		        alias = aliases.nextElement();
+		        if (ks.isKeyEntry(alias)) 
+		        	 break;
+	        }
+        	X509Certificate certificate = (X509Certificate) ks.getCertificate(alias);
+        	String cn = certificate.getSubjectX500Principal().getName();
+            int start = cn.indexOf("CN=");
+            int end = cn.indexOf(",", start);
+            if (end == -1) 
+                end = cn.length();
+            domainName = cn.substring(start + 3, end);
+                   
 	        sslContext = SSLContext.getInstance("TLS");
 	        sslContext.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
 	    } catch (UnrecoverableEntryException | KeyStoreException | NoSuchAlgorithmException | CertificateException | IOException | KeyManagementException e) {
@@ -79,7 +95,6 @@ public class CustomWebSocketServer extends WebSocketServer {
 	    	return null;
 	    }
 	    
-
 		return sslContext;
 	}
 
