@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<project name="websocket-proxy" default="jar" basedir="..">
+	
+	<property environment="env"/>
+	<property name="wowza.lib.dir" value="${env.WMSCONFIG_HOME}/lib"/>
+	<property name="jar.filename" value="sst-websocket-proxy.jar"/>
+	<property name="core.build.dir" value="bin"/>
+	
+	<target name="resolveDependencies">
+		<mkdir dir="lib" />
+		<get src="https://repo1.maven.org/maven2/org/java-websocket/Java-WebSocket/1.5.3/Java-WebSocket-1.5.3.jar" dest="lib/java-websocket-1.5.3.jar" usetimestamp="true" />
+	</target>
+
+	<target name="jar" depends="resolveDependencies">
+		<mkdir dir="bin" />
+		<jar jarfile="${wowza.lib.dir}/${jar.filename}">
+			<fileset dir="${core.build.dir}"/>
+			<zipfileset src="lib/java-websocket-1.5.3.jar"></zipfileset>
+		</jar>
+	</target>
+	
+</project>
